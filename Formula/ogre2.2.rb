@@ -1,17 +1,11 @@
 class Ogre22 < Formula
   desc "Scene-oriented 3D engine written in c++"
   homepage "https://www.ogre3d.org/"
-  url "https://github.com/OGRECave/ogre-next/archive/3aa42f57f77a52febf0aedfc14ac83be37aafd4c.tar.gz"
-  version "2.1.99999~pre0~0~20210319~3aa42f"
-  sha256 "393110ab7a12a2011be4c261b4acddcb00c9b538fae2898ec2705f3d61592767"
+  version "2.2.5"
   license "MIT"
   revision 1
 
-  head "https://github.com/OGRECave/ogre-next.git", branch: "v2-2"
-
-  bottle do
-    root_url "https://osrf-distributions.s3.amazonaws.com/bottles-simulation"
-  end
+  head "https://github.com/srmainwaring/ogre-next.git", branch: "feature/v2-2-egl-macos-texstorage"
 
   depends_on "cmake" => :build
   depends_on "pkg-config" => :test
@@ -21,40 +15,34 @@ class Ogre22 < Formula
   depends_on "libx11"
   depends_on "libzzip"
   depends_on "rapidjson"
-  depends_on "tbb"
-
-  patch do
-    # fix for cmake3 and c++11
-    url "https://gist.githubusercontent.com/j-rivero/9d800867870a0ca2a0e17949070f1f34/raw/4e412a58904df59d089957965214db1cfb5689ab/cmake3_c++11_ogre2.2_brew.patch"
-    sha256 "4a3d90b351819d81bc4c02f1adb98c85865a8bb7e0a8070a6e7f23e6f037fd73"
-  end
-
-  # patch do
-  # fix GL3+ compilation with Xcode 10
-  #  url "https://github.com/OGRECave/ogre-next/commit/b00a880a4aea5492615ce8e3363e81631a53bb5c.patch?full_index=1"
-  #  sha256 "8fe5beab9e50dfe1f0164e8dbffd20a79f5e9afe79802ab0ce29d8d83e4e0fe8"
-  # end
+#   depends_on "tbb"
 
   def install
     cmake_args = [
-      "-DOGRE_LIB_DIRECTORY=lib/OGRE-2.2",
-      "-DOGRE_BUILD_LIBS_AS_FRAMEWORKS=OFF",
-      "-DOGRE_FULL_RPATH:BOOL=FALSE",
-      "-DOGRE_BUILD_DOCS:BOOL=FALSE",
-      "-DOGRE_INSTALL_DOCS:BOOL=FALSE",
-      "-DOGRE_BUILD_SAMPLES:BOOL=FALSE",
-      "-DOGRE_BUILD_SAMPLES2:BOOL=FALSE",
-      "-DOGRE_INSTALL_SAMPLES:BOOL=FALSE",
-      "-DOGRE_INSTALL_SAMPLES_SOURCE:BOOL=FALSE",
-    ]
-    # use the following to disable GL3Plus render engine which won't work when OpenGL is removed
-    # cmake_args << "-DOGRE_BUILD_RENDERSYSTEM_GL3PLUS:BOOL=OFF" if MacOS::Xcode.version >= "10"
+        "-DCMAKE_BUILD_TYPE=RelWithDebInfo",
+        "-DCMAKE_CXX_FLAGS='-I/usr/local/include -F/Library/Frameworks'",
+        "-DCMAKE_CXX_STANDARD=11",
+        "-DCMAKE_OSX_ARCHITECTURES='x86_64'",
+        "-DOGRE_FULL_RPATH:BOOL=FALSE",
+        "-DOGRE_GLSUPPORT_USE_GLX:BOOL=FALSE",
+        "-DOGRE_BUILD_LIBS_AS_FRAMEWORKS:BOOL=FALSE",
+        "-DOGRE_BUILD_RENDERSYSTEM_GL3PLUS:BOOL=TRUE",
+        "-DOGRE_BUILD_SAMPLES2:BOOL=TRUE",
+        "-DOGRE_BUILD_SAMPLES_AS_BUNDLES:BOOL=FALSE",
+        "-DOGRE_BUILD_TESTS:BOOL=FALSE",
+        "-DOGRE_BUILD_TOOLS:BOOL=TRUE",
+        "-DOGRE_INSTALL_SAMPLES:BOOL=TRUE",
+        "-DOGRE_INSTALL_TOOLS:BOOL=TRUE",
+        "-DOGRE_LIB_DIRECTORY=lib/OGRE-2.2"
+      ]
+
     cmake_args.concat std_cmake_args
 
     mkdir "build" do
-      system "cmake", "..", *cmake_args
-      system "make", "install"
-    end
+        system "cmake", "..", *cmake_args
+        system "make", "-j16"
+        system "make", "install"
+      end
 
     # Put these cmake files where Debian puts them
     (share/"OGRE-2.2/cmake/modules").install Dir[prefix/"CMake/*.cmake"]
@@ -79,8 +67,8 @@ class Ogre22 < Formula
     inreplace (lib/"pkgconfig/OGRE-2.2-MeshLodGenerator.pc"), "-I${includedir}/OGRE/", "-I${includedir}/"
     inreplace (lib/"pkgconfig/OGRE-2.2-Overlay.pc"), "-I${includedir}/OGRE/", "-I${includedir}/"
 
-    # Move versioned libraries (*.2.2.0.dylib) to standard location and remove symlinks
-    lib.install Dir[lib/"OGRE-2.2/lib*.2.2.0.dylib"]
+    # Move versioned libraries (*.2.2.5.dylib) to standard location and remove symlinks
+    lib.install Dir[lib/"OGRE-2.2/lib*.2.2.5.dylib"]
     rm Dir[lib/"OGRE-2.2/lib*"]
 
     # Move plugins to subfolder
@@ -88,7 +76,7 @@ class Ogre22 < Formula
 
     # Restore lib symlinks
     Dir[lib/"lib*"].each do |l|
-      (lib/"OGRE-2.2").install_symlink l => File.basename(l.sub(".2.2.0", ""))
+      (lib/"OGRE-2.2").install_symlink l => File.basename(l.sub(".2.2.5", ""))
     end
   end
 
